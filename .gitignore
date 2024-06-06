@@ -99,3 +99,6 @@ io/
 
 # History files
 .history
+
+# Logs
+logs/

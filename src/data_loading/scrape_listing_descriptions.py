@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import argparse
 import logging
+import time
 
 
 def parse_arguments():
@@ -29,7 +30,7 @@ def setup_logging():
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(levelname)s - %(message)s',
                         handlers=[
-                            logging.FileHandler("'../../logs/description_parsing.log"),
+                            logging.FileHandler("../../logs/description_parsing.log"),
                             logging.StreamHandler()
                         ])
 
@@ -65,14 +66,14 @@ def main():
     logging.info(f"Data shape: {data_id.shape}")
 
     listing_id_list = data_id.id.values
-    output_file_path = os.path.join(args.description_parsing_path, 'output.jsonl')
+    output_file_path = os.path.join(args.description_parsing_path, 'descriptions_output.jsonl')
 
     # Initialize lists to store error information
     listing_description_list = []
     cannot_get_presentation_list = []
     cannot_get_selected_sections_list = []
     cannot_get_item_from_selected_section_list = []
-    no_matching_script_tag_list = []
+    listing_does_not_exist_no_matching_script_tag_list = []
 
     # Loop through each listing ID and process it
     total_listings = len(listing_id_list)
@@ -90,8 +91,8 @@ def main():
         script_tag = soup.find('script', {'data-injector-instances': 'true', 'id': 'data-injector-instances', 'type': 'application/json'})
         
         if not script_tag:
-            logging.warning(f"{listing_id} No matching script tag found.")
-            no_matching_script_tag_list.append(listing_id)
+            logging.warning(f"{listing_id} No matching script tag found. Listing ID does not exist")
+            listing_does_not_exist_no_matching_script_tag_list.append(listing_id)
             continue
 
         # Parse the JSON data from the script tag
@@ -131,7 +132,7 @@ def main():
                     if item['title']:
                         listing_dict[f"{item['title'].lower().replace(' ', '_')}_description"] = item['html']['htmlText']
                     else:
-                        listing_dict[f"description_{n}"] = item['html']['htmlText']
+                        listing_dict[f"place_description"] = item['html']['htmlText']
                         
         except (KeyError, IndexError):
             logging.error(f"{listing_id} can't get item from selected description section")
@@ -146,11 +147,13 @@ def main():
 
         logging.info(f"{listing_id} added")
 
+        time.sleep(0.5) # To limit throttling
+
     # Save error lists to files
     save_list_to_file('cannot_get_presentation_list.txt', cannot_get_presentation_list, args.description_parsing_path)
     save_list_to_file('cannot_get_selected_sections_list.txt', cannot_get_selected_sections_list, args.description_parsing_path)
     save_list_to_file('cannot_get_item_from_selected_section_list.txt', cannot_get_item_from_selected_section_list, args.description_parsing_path)
-    save_list_to_file('no_matching_script_tag_list.txt', no_matching_script_tag_list, args.description_parsing_path)
+    save_list_to_file('listing_does_not_exist_no_matching_script_tag_list.txt', listing_does_not_exist_no_matching_script_tag_list, args.description_parsing_path)
 
 if __name__ == '__main__':
     main()
