@@ -100,5 +100,12 @@ io/
 # History files
 .history
 
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # Logs
 logs/
+
