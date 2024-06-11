@@ -55,18 +55,6 @@ cd src/data_loading/
 python dump_listings_with_rapidapi.py 
 ```
 
-## How to dump listing information
-
-1. Activate the virtual environment as described above
-
-2. Add `.env` file to the root directory and insert your RapidAPI key there RAPIDAPI_KEY="your key". Should look like `.env_example` file
-
-3. Move to the folder with dumping file and run the file:
-```
-cd src/data_loading/
-python dump_listings_with_rapidapi.py 
-```
-
 ## How to scrape listing description
 
 1. Activate the virtual environment as described above
