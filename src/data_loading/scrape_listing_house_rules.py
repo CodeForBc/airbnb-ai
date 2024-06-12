@@ -6,6 +6,7 @@ import os
 import argparse
 import logging
 import time
+from utils import setup_logging, save_list_to_file
 
 
 def parse_arguments():
@@ -23,30 +24,51 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def setup_logging():
-    """
-    Setup logging configuration to log messages to both a file and the console.
-    """
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s',
-                        handlers=[
-                            logging.FileHandler("../../logs/description_parsing_house_rules.log"),
-                            logging.StreamHandler()
-                        ])
+def parse_house_rules_json(listing_id: str, presentation: dict):
+        house_rules_dict = {'listing_id': listing_id}
+
+        try:
+            sections = presentation['stayProductDetailPage']['sections']['sections']
+        except Exception as ex:
+            logging.error(f"Failed processing {listing_id}. {presentation=}. Error: {ex.with_traceback()}")
+            return
+
+        for section in sections:
+            try:
+                if section['section']['__typename'] == 'PoliciesSection':
+                    house_rules_section = section['section']
+                    logging.info(f"{listing_id} house_rules_section found")
+            except:
+                continue
 
 
-def save_list_to_file(file_name, data_list, path):
-    """
-    Save a list of data to a specified file.
+        for house_rules_item in house_rules_section['houseRulesSections']:
+            try:
+                if house_rules_item['title']:
+                    house_rule_name = f"{house_rules_item['title'].lower().replace(' ', '_')}_house_rule"
 
-    Args:
-        file_name (str): Name of the file to save the data.
-        data_list (list): List of data to save.
-        path (str): Directory path where the file will be saved.
-    """
-    file_path = os.path.join(path, file_name)
-    with open(file_path, 'w') as file:
-        file.write(json.dumps(data_list))
+                    items_list = []
+
+                    for item in house_rules_item['items']:
+                        if item['subtitle']:
+                            items_list.append(': '.join([item['title'], item['subtitle']]))
+                        else:
+                            items_list.append(item['title'])
+
+                    house_rules_dict[house_rule_name] = items_list
+
+                    if item['title'] == 'Additional rules':
+                        additional_rules_to_add_list = item['html']['htmlText']#.split('\n')
+                        house_rules_dict[house_rule_name].append(additional_rules_to_add_list)
+
+
+                # if house_rules_item['items']['title'] == 'Additional rules':
+                #     additional_rules_to_add_list = house_rules_item['html']['htmlText'].split('\n')
+                #     house_rules_dict[house_rule_name].extend(additional_rules_to_add_list)
+
+            except:
+                continue
+        return house_rules_dict
 
 
 def main():
@@ -55,7 +77,7 @@ def main():
     """
     # Parse command-line arguments
     args = parse_arguments()
-    setup_logging()
+    setup_logging("../../logs/description_parsing_house_rules.log")
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(args.description_parsing_path):
@@ -67,13 +89,6 @@ def main():
 
     listing_id_list = data_id.id.values
     output_file_path = os.path.join(args.description_parsing_path, 'description_parsing_house_rules.jsonl')
-
-    # Initialize lists to store error information
-    listing_description_list = []
-    cannot_get_presentation_list = []
-    cannot_get_selected_sections_list = []
-    cannot_get_item_from_selected_section_list = []
-    listing_does_not_exist_no_matching_script_tag_list = []
 
     # Loop through each listing ID and process it
     total_listings = len(listing_id_list)
@@ -92,7 +107,6 @@ def main():
         
         if not script_tag:
             logging.warning(f"{listing_id} No matching script tag found. Listing ID does not exist")
-            listing_does_not_exist_no_matching_script_tag_list.append(listing_id)
             continue
 
         # Parse the JSON data from the script tag
@@ -103,36 +117,11 @@ def main():
             presentation = listing_info_json['root > core-guest-spa'][1][1]['niobeMinimalClientData'][1][1]['data']['presentation']
         except KeyError:
             logging.error(f"{listing_id} can't get presentation")
-            cannot_get_presentation_list.append(listing_id)
-            continue
+            return
 
-        house_rules_dict = {'listing_id': listing_id}
+        # house_rules_dict
+        house_rules_dict = parse_house_rules_json(listing_id, presentation)
 
-        try:
-            sections = presentation['stayProductDetailPage']['sections']['sections']
-        except:
-            cannot_get_selected_sections_list.append(listing_id)
-            continue
-
-        for section in sections:
-            try:
-                if section['section']['__typename'] == 'PoliciesSection':
-                    house_rules_section = section['section']
-                    logging.info(f"{listing_id} house_rules_section found")
-            except:
-                continue
-
-        for house_rules_item in house_rules_section['houseRulesSections']:
-            try:
-                if house_rules_item['title']:
-                    house_rule_name = f"{house_rules_item['title'].lower().replace(' ', '_')}_house_rule"
-                    house_rules_dict[house_rule_name] = [item['title'] for item in house_rules_item['items']]
-                if house_rules_item['items']['title'] == 'Additional rules':
-                    additional_rules_to_add_list = house_rules_item['html']['htmlText'].split('\n')
-                    house_rules_dict[house_rule_name].extend(additional_rules_to_add_list)
-            except:
-                continue
-        
         # Write the extracted data to the output file
         with open(output_file_path, 'a') as file:  # Open file in append mode
             file.write(json.dumps(house_rules_dict) + '\n')
@@ -140,12 +129,6 @@ def main():
         logging.info(f"{listing_id} added")
 
         time.sleep(0.5) # To limit throttling
-
-    # Save error lists to files
-    save_list_to_file('cannot_get_presentation_list.txt', cannot_get_presentation_list, args.description_parsing_path)
-    save_list_to_file('cannot_get_selected_sections_list.txt', cannot_get_selected_sections_list, args.description_parsing_path)
-    save_list_to_file('cannot_get_item_from_selected_section_list.txt', cannot_get_item_from_selected_section_list, args.description_parsing_path)
-    save_list_to_file('listing_does_not_exist_no_matching_script_tag_list.txt', listing_does_not_exist_no_matching_script_tag_list, args.description_parsing_path)
 
 if __name__ == '__main__':
     main()
