@@ -38,3 +38,11 @@ def get_listing_ids(data_path: str) -> List[int]:
     listing_id_list = data_id.id.values
 
     return listing_id_list
+
+
+# Method to read the JSON Lines file
+def read_jsonl(file_path: str) -> List[dict]:
+    with open(file_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+        json_list = [json.loads(line) for line in lines]
+    return json_list
