@@ -28,19 +28,19 @@ def parse_arguments():
 
 
 def parse_house_rules_json(listing_id: str, presentation: dict):
-    house_rules_dict = {'listing_id': listing_id}
+    house_rules_dict = {}
 
     try:
         sections = presentation['stayProductDetailPage']['sections']['sections']
     except Exception as ex:
-        logging.error(f"Failed processing {listing_id}. {presentation=}. Error: {ex.with_traceback()}")
+        logging.error(f"Failed processing {listing_id=}. {presentation=}. Error: {ex.with_traceback()}")
         return
 
     for section in sections:
         try:
             if section['section']['__typename'] == 'PoliciesSection':
                 house_rules_section = section['section']
-                logging.info(f"{listing_id} house_rules_section found")
+                logging.info(f"{listing_id=} house_rules_section found")
         except:
             continue
 
@@ -67,6 +67,38 @@ def parse_house_rules_json(listing_id: str, presentation: dict):
         except:
             continue
     return house_rules_dict
+
+
+def parce_amenities(listing_id: str, presentation: dict) -> dict:
+    amenities_dict = {}
+
+    try:
+        sections = presentation['stayProductDetailPage']['sections']['sections']
+    except Exception as ex:
+        logging.error(f"Failed processing sections from presentation {listing_id=}. {presentation=}. Error: {ex.with_traceback()}")
+        return
+
+
+    for section in sections:
+        try:
+            if section['section']['__typename'] == 'AmenitiesSection':
+                amenities_section = section['section']  
+        except:
+            continue
+    
+    if 'seeAllAmenitiesGroups' not in amenities_section.keys():
+        logging.error(f"Failed processing seeAllAmenitiesGroups not in amenities_section, {amenities_section=} {listing_id=}. {presentation=}")
+        return
+
+    for amenity_item in amenities_section['seeAllAmenitiesGroups']:
+        try:
+            if amenity_item['title']:
+                amenity_name = f"{amenity_item['title'].lower().replace(' ', '_')}_amenities"
+                amenities_dict[amenity_name] = [item['title'] for item in amenity_item['amenities']]
+        except:
+            continue
+
+    return amenities_dict
 
 
 def get_listing_presentation(listing_info_json: object, listing_id: str) -> object:
@@ -109,40 +141,20 @@ def main():
         logging.info(f"Starting {listing_id_json_file=}, {listing_id=} ({count}/{total_listings})")
 
         json_file_path = os.path.join(args.data_path, listing_id_json_file)
-        
-        # url = f"https://www.airbnb.com/rooms/{listing_id}"
-
-        # response = requests.get(url)
-        # if response.status_code != 200:
-        #     logging.error(f"{listing_id=} failed to be scraped, {response.status_code=}")
-        #     continue
-
-        # html_content = response.text
-        # soup = BeautifulSoup(html_content, 'html.parser')
-
-        # # Find the specific script tag containing the JSON data
-        # script_tag = soup.find('script', {'data-injector-instances': 'true', 'id': 'data-injector-instances', 'type': 'application/json'})
-        
-        # if not script_tag:
-        #     logging.error(f"{listing_id} No matching script tag found. Listing ID does not exist")
-        #     continue
-
-        # # Parse the JSON data from the script tag
-        # listing_info_json = json.loads(script_tag.text)
-
         listing_info_json = read_jsonl(json_file_path)
-
-        # try:
-        #     # Extract the presentation data
-        #     presentation = listing_info_json['root > core-guest-spa'][1][1]['niobeMinimalClientData'][1][1]['data']['presentation']
-        # except KeyError:
-        #     logging.error(f"{listing_id} can't get presentation")
-        #     return
-
         presentation = get_listing_presentation(listing_info_json, listing_id)
+
+        parcing_dict = {'listing_id': listing_id}
 
         # house_rules_dict
         house_rules_dict = parse_house_rules_json(listing_id, presentation)
+        if house_rules_dict:
+            parcing_dict.update(house_rules_dict)
+
+        # amenities_dict
+        amenities_dict = parce_amenities(listing_id, presentation)
+        if amenities_dict:
+            parcing_dict.update(amenities_dict)
 
         # Write the extracted data to the output file
         with open(output_file_path, 'a') as file:  # Open file in append mode
