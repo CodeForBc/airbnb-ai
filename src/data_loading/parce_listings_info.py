@@ -83,6 +83,7 @@ def parce_amenities(listing_id: str, presentation: dict) -> dict:
         try:
             if section['section']['__typename'] == 'AmenitiesSection':
                 amenities_section = section['section']  
+                logging.info(f"{listing_id=} AmenitiesSection found")
         except:
             continue
     
@@ -148,21 +149,21 @@ def main():
 
         # house_rules_dict
         house_rules_dict = parse_house_rules_json(listing_id, presentation)
+        logging.info(f"{listing_id=} house_rules_dict processed {house_rules_dict=}")
         if house_rules_dict:
             parcing_dict.update(house_rules_dict)
 
         # amenities_dict
         amenities_dict = parce_amenities(listing_id, presentation)
+        logging.info(f"{listing_id=} amenities_dict processed {amenities_dict=}")
         if amenities_dict:
             parcing_dict.update(amenities_dict)
 
         # Write the extracted data to the output file
         with open(output_file_path, 'a') as file:  # Open file in append mode
-            file.write(json.dumps(house_rules_dict) + '\n')
+            file.write(json.dumps(parcing_dict) + '\n')
 
         logging.info(f"{listing_id=} added")
-
-        # time.sleep(0.5) # To limit throttling
 
 if __name__ == '__main__':
     main()
