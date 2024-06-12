@@ -5,7 +5,6 @@ import pandas as pd
 import os
 import argparse
 import logging
-import time
 from utils import setup_logging, save_list_to_file, get_listing_ids, read_jsonl
 
 
@@ -20,9 +19,9 @@ def parse_arguments():
         argparse.Namespace: Parsed command-line arguments
     """
     parser = argparse.ArgumentParser(description='Parse Airbnb listing house rules.')
-    parser.add_argument('--output_path', type=str, default='../../data/sample_parce_listings',
+    parser.add_argument('--output_path', type=str, default='../../data/parse_listings',
                         help='Path to save the parsed house rules files')
-    parser.add_argument('--data_path', type=str, default='../../data/download_test',
+    parser.add_argument('--data_path', type=str, default='../../data/listing_page_jsons',
                         help='Path to the the folder containing downloaded listings jsonls')
     return parser.parse_args()
 
@@ -102,6 +101,45 @@ def parce_amenities(listing_id: str, presentation: dict) -> dict:
     return amenities_dict
 
 
+def parce_description(listing_id: str, presentation: dict) -> dict:
+    description_dict = {}
+
+    try:
+        # Extract selected description sections
+        selected_description_sections = [
+            section for section in presentation['stayProductDetailPage']['sections']['sections']
+            if section['sectionId'] == 'DESCRIPTION_MODAL'
+        ]
+        
+        logging.info(f"{listing_id} Number of selected description sections: {len(selected_description_sections)}")
+        selected_description_section = selected_description_sections[0]
+
+    except Exception as ex:
+        logging.error(f"Failed processing selected_description_section for description from presentation {listing_id=}. {presentation=}. Error: {ex.with_traceback()}")
+        return
+
+    try:
+        # Extract items from the selected description section
+        logging.info(f"{listing_id} Number of items in selected description section: {len(selected_description_section['section']['items'])}")
+
+        for n, item in enumerate(selected_description_section['section']['items']):
+            if item['html']['htmlText']:
+                try:
+                    if item['title']:
+                        description_dict[f"{item['title'].lower().replace(' ', '_')}_description"] = item['html']['htmlText']
+                    else:
+                        description_dict[f"place_description"] = item['html']['htmlText']
+                except Exception as ex:
+                    logging.error(f"Failed to get title from item description {listing_id=}. {selected_description_section=} {item=}. Error: {ex.with_traceback()}")
+                    return
+                    
+    except Exception as ex:
+        logging.error(f"Failed to get item from selected description section for description {listing_id=}. {selected_description_section=}. Error: {ex.with_traceback()}")
+        return
+        
+    return description_dict
+
+
 def get_listing_presentation(listing_info_json: object, listing_id: str) -> object:
     try:
         # Extract the presentation data
@@ -131,39 +169,51 @@ def main():
                             for jsonl_filepath in os.listdir(args.data_path) if jsonl_filepath.endswith('.jsonl')]
     logging.info(f"{len(listing_id_json_list)=}")
 
-    output_file_path = os.path.join(args.output_path, 'house_rules.jsonl')
+    output_file_path = os.path.join(args.output_path, 'description_amenities_house_rules.jsonl')
 
     # Loop through each listing ID and process it
     total_listings = len(listing_id_json_list)
 
-    for count, listing_id_json_file in enumerate(listing_id_json_list, start=1):
+    try:
 
-        listing_id = listing_id_json_file.replace('.jsonl', '')
-        logging.info(f"Starting {listing_id_json_file=}, {listing_id=} ({count}/{total_listings})")
+        for count, listing_id_json_file in enumerate(listing_id_json_list, start=1):
 
-        json_file_path = os.path.join(args.data_path, listing_id_json_file)
-        listing_info_json = read_jsonl(json_file_path)
-        presentation = get_listing_presentation(listing_info_json, listing_id)
+            listing_id = listing_id_json_file.replace('.jsonl', '')
+            logging.info(f"Starting {listing_id_json_file=}, {listing_id=} ({count}/{total_listings})")
 
-        parcing_dict = {'listing_id': listing_id}
+            json_file_path = os.path.join(args.data_path, listing_id_json_file)
+            listing_info_json = read_jsonl(json_file_path)
+            presentation = get_listing_presentation(listing_info_json, listing_id)
 
-        # house_rules_dict
-        house_rules_dict = parse_house_rules_json(listing_id, presentation)
-        logging.info(f"{listing_id=} house_rules_dict processed {house_rules_dict=}")
-        if house_rules_dict:
-            parcing_dict.update(house_rules_dict)
+            parcing_dict = {'listing_id': listing_id}
 
-        # amenities_dict
-        amenities_dict = parce_amenities(listing_id, presentation)
-        logging.info(f"{listing_id=} amenities_dict processed {amenities_dict=}")
-        if amenities_dict:
-            parcing_dict.update(amenities_dict)
+            # house_rules_dict
+            house_rules_dict = parse_house_rules_json(listing_id, presentation)
+            logging.info(f"{listing_id=} house_rules_dict processed {house_rules_dict=}")
+            if house_rules_dict:
+                parcing_dict.update(house_rules_dict)
 
-        # Write the extracted data to the output file
-        with open(output_file_path, 'a') as file:  # Open file in append mode
-            file.write(json.dumps(parcing_dict) + '\n')
+            # amenities_dict
+            description_dict = parce_amenities(listing_id, presentation)
+            logging.info(f"{listing_id=} description_dict processed {description_dict=}")
+            if description_dict:
+                parcing_dict.update(description_dict)
 
-        logging.info(f"{listing_id=} added")
+            # amenities_dict
+            amenities_dict = parce_description(listing_id, presentation)
+            logging.info(f"{listing_id=} amenities_dict processed {amenities_dict=}")
+            if amenities_dict:
+                parcing_dict.update(amenities_dict)
+
+            # Write the extracted data to the output file
+            with open(output_file_path, 'a') as file:  # Open file in append mode
+                file.write(json.dumps(parcing_dict) + '\n')
+
+            logging.info(f"{listing_id=} added")
+    
+    except Exception as ex:
+        logging.error(f"For loop failed. Error: {ex.with_traceback()}")
+        return
 
 if __name__ == '__main__':
     main()
