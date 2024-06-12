@@ -61,14 +61,12 @@ def parse_house_rules_json(listing_id: str, presentation: dict):
                         additional_rules_to_add_list = item['html']['htmlText']#.split('\n')
                         house_rules_dict[house_rule_name].append(additional_rules_to_add_list)
 
-
-                # if house_rules_item['items']['title'] == 'Additional rules':
-                #     additional_rules_to_add_list = house_rules_item['html']['htmlText'].split('\n')
-                #     house_rules_dict[house_rule_name].extend(additional_rules_to_add_list)
-
             except:
                 continue
         return house_rules_dict
+
+
+def get_listing_
 
 
 def main():
