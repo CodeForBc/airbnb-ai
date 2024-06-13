@@ -70,17 +70,17 @@ def merge_jsonl_files(jsonl_files):
     
     return merged_data
 
-def extract_accomodation_types(output_file_path, data):
-    """Extract accomodation types from data and save it in jsonl file"""
+def extract_accommodation_types(output_file_path, data):
+    """Extract accommodation types from data and save it in jsonl file"""
     for idx, row in data.iterrows():
-        accomodation_type = {'listing_id': str(row['id']), 'accomodation_type': row['type']}
+        accommodation_type = {'listing_id': str(row['id']), 'accommodation_type': row['type']}
         # Write the extracted data to the output file
         with open(output_file_path, 'a') as file:  # Open file in append mode
-            file.write(json.dumps(accomodation_type) + '\n')
+            file.write(json.dumps(accommodation_type) + '\n')
 
 def main():
     """
-    Main function to extract Airbnb raw data, listing descriptions, accomodation type, amenities, house rules and host information. Outputs JSON response.
+    Main function to extract Airbnb raw data, listing descriptions, accommodation type, amenities, house rules and host information. Outputs JSON response.
     """
     # Parse command-line arguments
     args = parse_arguments()
@@ -91,9 +91,9 @@ def main():
     
     logging.info(f"data type: {data.shape}")
 
-    # Extracting and saving new accomodation types jsonl
-    output_file_path = os.path.join(args.description_parsing_path, 'accomodation_types.jsonl')
-    extract_accomodation_types(output_file_path, data)
+    # Extracting and saving new accommodation types jsonl
+    output_file_path = os.path.join(args.description_parsing_path, 'accommodation_types.jsonl')
+    extract_accommodation_types(output_file_path, data)
 
     # Merging all jsonl into one jsonl
     file_paths = glob.glob('../../data/description_parsing/*.jsonl')
