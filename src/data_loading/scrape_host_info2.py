@@ -19,7 +19,7 @@ df = pd.read_csv(file_path)
 print("Column names in the CSV file:", df.columns)
 
 # Add new columns for latitude and longitude directly from the 'Lat' and 'lng' columns
-df['latitude'] = df['Lat']
+df['latitude'] = df['lat']
 df['longitude'] = df['lng']
 
 # Function to calculate distance between two points
