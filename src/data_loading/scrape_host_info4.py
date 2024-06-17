@@ -112,20 +112,20 @@ def handle_errors_and_save(problematic_ids, file_name, path):
 try:
     combined_listings_df = find_nearby_listings_combined(df)
 except Exception as e:
-    handle_errors_and_save(df['id'], 'problematic_listings.txt', r'D:\airbnb-ai\data\raw_data')
+    handle_errors_and_save(df['id'], 'problematic_listings.txt', r'D:\repos\airbnb-ai\data\raw_data')
     raise e
 
 # Calculate host listings information
 try:
     host_listings_info_df = calculate_host_listings_info(df)
 except Exception as e:
-    handle_errors_and_save(df['id'], 'problematic_listings.txt', r'D:\airbnb-ai\data\raw_data')
+    handle_errors_and_save(df['id'], 'problematic_listings.txt', r'D:\repos\airbnb-ai\data\raw_data')
     raise e
 
 # Specify the output file name and path
 output_file_name_combined = 'combined_listings.csv'
 output_file_name_host_info = 'host_listings_info.csv'
-output_path = r'D:\airbnb-ai\data\raw_data'
+output_path = r'D:\repos\airbnb-ai\data\raw_data'
 
 # Save the results to CSV files
 save_dataframe_to_file(output_file_name_combined, combined_listings_df, output_path)
