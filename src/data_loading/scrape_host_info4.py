@@ -10,10 +10,10 @@ from geopy.distance import geodesic
 print("Current working directory:", os.getcwd())
 
 # List files in the directory to verify the file exists
-print("Files in directory:", os.listdir(r'D:\airbnb-ai\data\raw_data'))
+print("Files in directory:", os.listdir(r'D:\repos\airbnb-ai\data\raw_data'))
 
 # Load the CSV file using an absolute path
-file_path = r'D:\airbnb-ai\data\raw_data\Xavier_rawdata_2024-07-08_Kelowna_Chilliwack_Abbotsford.csv'
+file_path = r'D:\repos\airbnb-ai\data\raw_data\Xavier_rawdata_2024-07-08_Kelowna_Chilliwack_Abbotsford.csv'
 df = pd.read_csv(file_path)
 
 # Print the column names to verify
