@@ -7,6 +7,7 @@ from utils import setup_logging, get_listing_ids
 import logging
 import argparse
 from typing import List 
+import time
 
 
 LOG_FILE_PATH = "../../logs/download_listing_jsons.log"
@@ -46,10 +47,20 @@ def main():
 
     total_listings = len(listing_id_list)
 
+    already_added_listing_ids = set([listing_id[:-6] 
+                                     for listing_id in os.listdir(args.path_to_save) 
+                                     if listing_id.endswith('.jsonl')])
+    
+    print(f'{already_added_listing_ids=}')
+
     for count, listing_id in enumerate(listing_id_list, start=1):
         listing_id = str(listing_id)
 
         logging.info(f"Starting {listing_id=} ({count}/{total_listings})")
+
+        if listing_id in already_added_listing_ids:
+            logging.info(f"{listing_id=} already exists")
+            continue
         
         url = f"https://www.airbnb.com/rooms/{listing_id}"
 
@@ -80,6 +91,8 @@ def main():
             file.write(json.dumps(listing_info_json) + '\n')
 
         logging.info(f"{listing_id=} saved to {output_file_path=}")
+
+        time.sleep(0.2)
 
 
 if __name__ == '__main__':

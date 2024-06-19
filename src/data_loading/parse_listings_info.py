@@ -1,14 +1,11 @@
 import json
-import requests
-from bs4 import BeautifulSoup
 import pandas as pd
 import os
 import argparse
 import logging
-from utils import setup_logging, save_list_to_file, get_listing_ids, read_jsonl
+from utils import setup_logging, read_jsonl
 
-
-LOG_FILE_PATH = "../../logs/parsing_listing_info.log"
+LOG_FILE_PATH = "parsing_listing_info.log"
 
 
 def parse_arguments():
@@ -26,128 +23,126 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def safe_get(dictionary, keys, default=None):
+    """ Safely get a value from a nested dictionary using a list of keys """
+    for key in keys:
+        if dictionary is not None and key in dictionary:
+            dictionary = dictionary[key]
+        else:
+            return default
+    return dictionary
+
+
 def parse_house_rules_json(listing_id: str, presentation: dict):
     house_rules_dict = {}
+    sections = safe_get(presentation, ['stayProductDetailPage', 'sections', 'sections'], [])
 
-    try:
-        sections = presentation['stayProductDetailPage']['sections']['sections']
-    except Exception as ex:
-        logging.error(f"Failed processing {listing_id=}. {presentation=}. Error: {ex.with_traceback()}")
-        return
-
+    house_rules_section = None
     for section in sections:
-        try:
-            if section['section']['__typename'] == 'PoliciesSection':
-                house_rules_section = section['section']
-                logging.info(f"{listing_id=} house_rules_section found")
-        except:
-            continue
+        if safe_get(section, ['section', '__typename']) == 'PoliciesSection':
+            house_rules_section = safe_get(section, ['section'])
+            if house_rules_section:
+                logging.info(f"{listing_id=} house rules section found")
+                break
 
+    if not house_rules_section:
+        logging.error(f"No PoliciesSection found for {listing_id=}.")
+        return house_rules_dict
 
-    for house_rules_item in house_rules_section['houseRulesSections']:
-        try:
-            if house_rules_item['title']:
-                house_rule_name = f"{house_rules_item['title'].lower().replace(' ', '_')}_house_rule"
+    house_rules_sections = safe_get(house_rules_section, ['houseRulesSections'], [])
+    for house_rules_item in house_rules_sections:
+        title = safe_get(house_rules_item, ['title'])
+        if title:
+            house_rule_name = f"{title.lower().replace(' ', '_')}_house_rule"
+            items = safe_get(house_rules_item, ['items'], [])
 
-                items_list = []
+            items_list = []
+            for item in items:
+                item_title = safe_get(item, ['title'])
+                subtitle = safe_get(item, ['subtitle'])
+                if subtitle:
+                    items_list.append(': '.join([item_title, subtitle]))
+                else:
+                    items_list.append(item_title)
 
-                for item in house_rules_item['items']:
-                    if item['subtitle']:
-                        items_list.append(': '.join([item['title'], item['subtitle']]))
-                    else:
-                        items_list.append(item['title'])
+                # Handle additional rules within the same loop
+                if item_title == 'Additional rules':
+                    additional_rules_text = safe_get(item, ['html', 'htmlText'])
+                    if additional_rules_text:
+                        items_list.append(additional_rules_text)
 
-                house_rules_dict[house_rule_name] = items_list
+            house_rules_dict[house_rule_name] = items_list
 
-                if item['title'] == 'Additional rules':
-                    additional_rules_to_add_list = item['html']['htmlText']#.split('\n')
-                    house_rules_dict[house_rule_name].append(additional_rules_to_add_list)
-
-        except:
-            continue
     return house_rules_dict
 
 
-def parce_amenities(listing_id: str, presentation: dict) -> dict:
+def parse_amenities(listing_id: str, presentation: dict) -> dict:
     amenities_dict = {}
+    sections = safe_get(presentation, ['stayProductDetailPage', 'sections', 'sections'], [])
 
-    try:
-        sections = presentation['stayProductDetailPage']['sections']['sections']
-    except Exception as ex:
-        logging.error(f"Failed processing sections from presentation {listing_id=}. {presentation=}. Error: {ex.with_traceback()}")
-        return
-
-
+    amenities_section = None
     for section in sections:
-        try:
-            if section['section']['__typename'] == 'AmenitiesSection':
-                amenities_section = section['section']  
+        if safe_get(section, ['section', '__typename']) == 'AmenitiesSection':
+            amenities_section = safe_get(section, ['section'])
+            if amenities_section:
                 logging.info(f"{listing_id=} AmenitiesSection found")
-        except:
-            continue
-    
-    if 'seeAllAmenitiesGroups' not in amenities_section.keys():
-        logging.error(f"Failed processing seeAllAmenitiesGroups not in amenities_section, {amenities_section=} {listing_id=}. {presentation=}")
-        return
+                break
 
-    for amenity_item in amenities_section['seeAllAmenitiesGroups']:
-        try:
-            if amenity_item['title']:
-                amenity_name = f"{amenity_item['title'].lower().replace(' ', '_')}_amenities"
-                amenities_dict[amenity_name] = [item['title'] for item in amenity_item['amenities']]
-        except:
-            continue
+    if not amenities_section or 'seeAllAmenitiesGroups' not in amenities_section:
+        logging.error(f"AmenitiesSection not found or missing 'seeAllAmenitiesGroups' key in {listing_id=}. {presentation=}")
+        return amenities_dict
+
+    amenities_groups = safe_get(amenities_section, ['seeAllAmenitiesGroups'], [])
+    for amenity_item in amenities_groups:
+        title = safe_get(amenity_item, ['title'])
+        if title:
+            amenity_name = f"{title.lower().replace(' ', '_')}_amenities"
+            amenities_list = [item['title'] for item in safe_get(amenity_item, ['amenities'], [])]
+            amenities_dict[amenity_name] = amenities_list
 
     return amenities_dict
 
 
-def parce_description(listing_id: str, presentation: dict) -> dict:
+def parse_description(listing_id: str, presentation: dict) -> dict:
     description_dict = {}
 
-    try:
-        # Extract selected description sections
-        selected_description_sections = [
-            section for section in presentation['stayProductDetailPage']['sections']['sections']
-            if section['sectionId'] == 'DESCRIPTION_MODAL'
-        ]
-        
-        logging.info(f"{listing_id} Number of selected description sections: {len(selected_description_sections)}")
-        selected_description_section = selected_description_sections[0]
+    # Extract selected description sections
+    sections = safe_get(presentation, ['stayProductDetailPage', 'sections', 'sections'], [])
+    selected_description_sections = [
+        section for section in sections
+        if safe_get(section, ['sectionId']) == 'DESCRIPTION_MODAL'
+    ]
 
-    except Exception as ex:
-        logging.error(f"Failed processing selected_description_section for description from presentation {listing_id=}. {presentation=}. Error: {ex.with_traceback()}")
-        return
+    if not selected_description_sections:
+        logging.error(f"No DESCRIPTION_MODAL sections found in presentation {listing_id=}. {presentation=}")
+        return description_dict
 
-    try:
-        # Extract items from the selected description section
-        logging.info(f"{listing_id} Number of items in selected description section: {len(selected_description_section['section']['items'])}")
+    logging.info(f"{listing_id} Number of selected description sections: {len(selected_description_sections)}")
+    selected_description_section = selected_description_sections[0]
 
-        for n, item in enumerate(selected_description_section['section']['items']):
-            if item['html']['htmlText']:
-                try:
-                    if item['title']:
-                        description_dict[f"{item['title'].lower().replace(' ', '_')}_description"] = item['html']['htmlText']
-                    else:
-                        description_dict[f"place_description"] = item['html']['htmlText']
-                except Exception as ex:
-                    logging.error(f"Failed to get title from item description {listing_id=}. {selected_description_section=} {item=}. Error: {ex.with_traceback()}")
-                    return
-                    
-    except Exception as ex:
-        logging.error(f"Failed to get item from selected description section for description {listing_id=}. {selected_description_section=}. Error: {ex.with_traceback()}")
-        return
-        
+    # Extract items from the selected description section
+    items = safe_get(selected_description_section, ['section', 'items'], [])
+    logging.info(f"{listing_id} Number of items in selected description section: {len(items)}")
+
+    for n, item in enumerate(items):
+        html_text = safe_get(item, ['html', 'htmlText'])
+        if html_text:
+            title = safe_get(item, ['title'])
+            key = f"{title.lower().replace(' ', '_')}_description" if title else "place_description"
+            description_dict[key] = html_text
+
     return description_dict
 
 
 def get_listing_presentation(listing_info_json: object, listing_id: str) -> object:
     try:
         # Extract the presentation data
-        presentation = listing_info_json[0]['root > core-guest-spa'][1][1]['niobeMinimalClientData'][1][1]['data']['presentation']
+        presentation = listing_info_json[0]['root > core-guest-spa'][1][1]['niobeMinimalClientData'][1][1]['data'][
+            'presentation']
     except Exception as ex:
         logging.error(f"{listing_id=} can't get presentation. Error: {ex.with_traceback()}")
         return
-    
+
     return presentation
 
 
@@ -165,7 +160,7 @@ def main():
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
 
-    listing_id_json_list = [jsonl_filepath 
+    listing_id_json_list = [jsonl_filepath
                             for jsonl_filepath in os.listdir(args.data_path) if jsonl_filepath.endswith('.jsonl')]
     logging.info(f"{len(listing_id_json_list)=}")
 
@@ -194,13 +189,13 @@ def main():
                 parcing_dict.update(house_rules_dict)
 
             # amenities_dict
-            description_dict = parce_amenities(listing_id, presentation)
+            description_dict = parse_amenities(listing_id, presentation)
             logging.info(f"{listing_id=} description_dict processed {description_dict=}")
             if description_dict:
                 parcing_dict.update(description_dict)
 
             # amenities_dict
-            amenities_dict = parce_description(listing_id, presentation)
+            amenities_dict = parse_description(listing_id, presentation)
             logging.info(f"{listing_id=} amenities_dict processed {amenities_dict=}")
             if amenities_dict:
                 parcing_dict.update(amenities_dict)
@@ -210,10 +205,11 @@ def main():
                 file.write(json.dumps(parcing_dict) + '\n')
 
             logging.info(f"{listing_id=} added")
-    
+
     except Exception as ex:
         logging.error(f"For loop failed. Error: {ex.with_traceback()}")
         return
+
 
 if __name__ == '__main__':
     main()
