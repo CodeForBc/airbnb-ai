@@ -17,7 +17,7 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(description='Parse Airbnb listing house rules.')
     parser.add_argument('--output_path', type=str, default='../../data/parse_listings',
-                        help='Path to save the parsed house rules files')
+                        help='Path to save the parsed jsonl files with listing descriptions, amenities and house rules')
     parser.add_argument('--data_path', type=str, default='../../data/listing_page_jsons',
                         help='Path to the the folder containing downloaded listings jsonls')
     return parser.parse_args()
