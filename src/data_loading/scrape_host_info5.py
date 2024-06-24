@@ -6,6 +6,14 @@ import pandas as pd
 import os
 from geopy.distance import geodesic
 
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+
+# Authenticate and create the PyDrive client.
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()  # Creates local webserver and automatically handles authentication.
+drive = GoogleDrive(gauth)
+
 url='https://drive.google.com/file/d/1LMW6cz69CWwK9EPPP5yralthwYxBhTMI/view?usp=drive_link'
 file_id=url.split('/')[-2]
 dwn_url='https://drive.google.com/uc?id=' + file_id
@@ -128,14 +136,38 @@ except Exception as e:
     handle_errors_and_save(df['id'], 'problematic_listings.txt', r'D:\repos\airbnb-ai\data\raw_data')
     raise e
 
-# Specify the output file name and path
+# # Specify the output file name and path
+# output_file_name_combined = 'combined_listings.csv'
+# output_file_name_host_info = 'host_listings_info.csv'
+# output_path = r'D:\repos\airbnb-ai\data\raw_data'
+
+# # Save the results to CSV files
+# save_dataframe_to_file(output_file_name_combined, combined_listings_df, output_path)
+# save_dataframe_to_file(output_file_name_host_info, host_listings_info_df, output_path)
+
+# Specify the output file names
 output_file_name_combined = 'combined_listings.csv'
 output_file_name_host_info = 'host_listings_info.csv'
-output_path = r'D:\repos\airbnb-ai\data\raw_data'
 
-# Save the results to CSV files
-save_dataframe_to_file(output_file_name_combined, combined_listings_df, output_path)
-save_dataframe_to_file(output_file_name_host_info, host_listings_info_df, output_path)
+# Save the combined listings file locally
+combined_listings_df.to_csv(output_file_name_combined, index=False)
+
+# Save the host listings info file locally
+host_listings_info_df.to_csv(output_file_name_host_info, index=False)
+
+# Function to upload a file to Google Drive
+def upload_to_drive(file_path, drive_folder_id):
+    file = drive.CreateFile({'parents': [{'id': drive_folder_id}]})
+    file.SetContentFile(file_path)
+    file.Upload()
+    print(f'File {file_path} uploaded to Google Drive.')
+
+# Google Drive folder ID
+drive_folder_id = '17QEXPIn2Q1XeaaMm724MDEBS_mAMRALz'
+
+# Upload files to Google Drive
+upload_to_drive(output_file_name_combined, drive_folder_id)
+upload_to_drive(output_file_name_host_info, drive_folder_id)
 
 # Display the results in the console
 print("Combined Listings:")
