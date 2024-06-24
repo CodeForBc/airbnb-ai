@@ -4,6 +4,7 @@ import os
 import argparse
 import logging
 from utils import setup_logging, read_jsonl
+from typing import List
 
 LOG_FILE_PATH = "parsing_listing_info.log"
 
@@ -23,7 +24,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def safe_get(dictionary, keys, default=None):
+def safe_get(dictionary: dict, keys: List[str], default=None) -> dict:
     """ Safely get a value from a nested dictionary using a list of keys """
     for key in keys:
         if dictionary is not None and key in dictionary:
@@ -33,7 +34,7 @@ def safe_get(dictionary, keys, default=None):
     return dictionary
 
 
-def parse_house_rules_json(listing_id: str, presentation: dict):
+def parse_house_rules_json(listing_id: str, presentation: dict) -> dict:
     house_rules_dict = {}
     sections = safe_get(presentation, ['stayProductDetailPage', 'sections', 'sections'], [])
 
@@ -170,7 +171,6 @@ def main():
     total_listings = len(listing_id_json_list)
 
     try:
-
         for count, listing_id_json_file in enumerate(listing_id_json_list, start=1):
 
             listing_id = listing_id_json_file.replace('.jsonl', '')
