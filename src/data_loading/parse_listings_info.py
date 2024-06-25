@@ -5,6 +5,7 @@ import argparse
 import logging
 from utils import setup_logging, read_jsonl
 from typing import List
+import time
 
 LOG_FILE_PATH = "../../logs/parsing_listing_info.log"
 
@@ -243,7 +244,11 @@ def main():
                             for jsonl_filepath in os.listdir(args.data_path) if jsonl_filepath.endswith('.jsonl')]
     logging.info(f"{len(listing_id_json_list)=}")
 
-    output_file_path = os.path.join(args.output_path, 'description_amenities_house_rules.jsonl')
+    # Create a file name with the current date and time
+    current_time = time.localtime()
+    time_str = time.strftime("%Y%m%d_%H%M%S", current_time)
+
+    output_file_path = os.path.join(args.output_path, f'description_amenities_house_rules_{time_str}.jsonl')
 
     # Loop through each listing ID and process it
     total_listings = len(listing_id_json_list)
@@ -266,7 +271,7 @@ def main():
             if house_rules_dict:
                 parcing_dict.update(house_rules_dict)
 
-            # amenities_dict
+            # description_dict
             description_dict = parse_amenities(listing_id, presentation)
             logging.info(f"{listing_id=} description_dict processed {description_dict=}")
             if description_dict:
