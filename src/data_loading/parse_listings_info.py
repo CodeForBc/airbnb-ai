@@ -67,7 +67,7 @@ def replace_line_breaks(initial_dict: dict) -> dict:
     return initial_dict
 
 
-def parse_house_rules_json(listing_id: str, presentation: dict) -> dict:
+def parse_house_rules(listing_id: str, presentation: dict) -> dict:
     """
     Parse house rules from the presentation dictionary.
 
@@ -266,7 +266,7 @@ def main():
             parcing_dict = {'listing_id': listing_id}
 
             # house_rules_dict
-            house_rules_dict = parse_house_rules_json(listing_id, presentation)
+            house_rules_dict = parse_house_rules(listing_id, presentation)
             logging.info(f"{listing_id=} house_rules_dict processed {house_rules_dict=}")
             if house_rules_dict:
                 parcing_dict.update(house_rules_dict)
