@@ -226,6 +226,47 @@ def get_listing_presentation(listing_info_json: object, listing_id: str) -> obje
     return presentation
 
 
+def parse_listing(listing_info_json: object, listing_id: str) -> dict:
+    """
+    Parse listing information from the provided JSON object and listing ID.
+
+    This function extracts and consolidates various pieces of information about an Airbnb listing
+    such as house rules, description, and amenities. It utilizes helper functions to parse specific
+    sections of the listing's presentation data.
+
+    Args:
+        listing_info_json (object): The JSON object containing listing information.
+        listing_id (str): The ID of the listing.
+
+    Returns:
+        dict: A dictionary containing parsed information about the listing, including house rules,
+              description, and amenities.
+    """
+    presentation = get_listing_presentation(listing_info_json, listing_id)
+
+    parcing_dict = {'listing_id': listing_id}
+
+    # house_rules_dict
+    house_rules_dict = parse_house_rules(listing_id, presentation)
+    logging.info(f"{listing_id=} house_rules_dict processed {house_rules_dict=}")
+    if house_rules_dict:
+        parcing_dict.update(house_rules_dict)
+
+    # description_dict
+    description_dict = parse_amenities(listing_id, presentation)
+    logging.info(f"{listing_id=} description_dict processed {description_dict=}")
+    if description_dict:
+        parcing_dict.update(description_dict)
+
+    # amenities_dict
+    amenities_dict = parse_description(listing_id, presentation)
+    logging.info(f"{listing_id=} amenities_dict processed {amenities_dict=}")
+    if amenities_dict:
+        parcing_dict.update(amenities_dict)
+
+    return parcing_dict
+
+
 def main():
     """
     Main function to parse Airbnb listing descriptions, amenities, and house rules, and save them to files.
@@ -240,49 +281,32 @@ def main():
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
 
+    # Create a file name with the current date and time
+    current_time = time.localtime()
+    time_str = time.strftime("%Y%m%d_%H%M%S", current_time)
+    output_file_path = os.path.join(args.output_path, f'description_amenities_house_rules_{time_str}.jsonl')
+
+    # Create listing_id list
     listing_id_json_list = [jsonl_filepath
                             for jsonl_filepath in os.listdir(args.data_path) if jsonl_filepath.endswith('.jsonl')]
     logging.info(f"{len(listing_id_json_list)=}")
 
-    # Create a file name with the current date and time
-    current_time = time.localtime()
-    time_str = time.strftime("%Y%m%d_%H%M%S", current_time)
-
-    output_file_path = os.path.join(args.output_path, f'description_amenities_house_rules_{time_str}.jsonl')
-
-    # Loop through each listing ID and process it
     total_listings = len(listing_id_json_list)
 
+    # Loop through each listing ID and process it
     try:
         for count, listing_id_json_file in enumerate(listing_id_json_list, start=1):
 
             listing_id = listing_id_json_file.replace('.jsonl', '')
             logging.info(f"Starting {listing_id_json_file=}, {listing_id=} ({count}/{total_listings})")
 
+            # Open .jsonl file
             json_file_path = os.path.join(args.data_path, listing_id_json_file)
             listing_info_json = read_jsonl(json_file_path)
-            presentation = get_listing_presentation(listing_info_json, listing_id)
 
-            parcing_dict = {'listing_id': listing_id}
-
-            # house_rules_dict
-            house_rules_dict = parse_house_rules(listing_id, presentation)
-            logging.info(f"{listing_id=} house_rules_dict processed {house_rules_dict=}")
-            if house_rules_dict:
-                parcing_dict.update(house_rules_dict)
-
-            # description_dict
-            description_dict = parse_amenities(listing_id, presentation)
-            logging.info(f"{listing_id=} description_dict processed {description_dict=}")
-            if description_dict:
-                parcing_dict.update(description_dict)
-
-            # amenities_dict
-            amenities_dict = parse_description(listing_id, presentation)
-            logging.info(f"{listing_id=} amenities_dict processed {amenities_dict=}")
-            if amenities_dict:
-                parcing_dict.update(amenities_dict)
-
+            # Main parsing logic
+            parcing_dict = parse_listing(listing_info_json, listing_id)
+            
             # Write the extracted data to the output file
             with open(output_file_path, 'a') as file:  # Open file in append mode
                 file.write(json.dumps(parcing_dict) + '\n')

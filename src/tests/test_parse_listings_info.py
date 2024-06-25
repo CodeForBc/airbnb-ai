@@ -4,7 +4,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'd
 
 import pytest
 from ..data_loading.parse_listings_info import safe_get, replace_line_breaks, \
-    get_listing_presentation, parse_house_rules, parse_amenities, parse_description
+    get_listing_presentation, parse_house_rules, parse_amenities, parse_description, \
+    parse_listing
 from ..data_loading.utils import read_jsonl
 
 # Sample data from downloaded jsons out of htmls
@@ -101,11 +102,11 @@ def test_parse_house_rules():
 
 
 def test_parse_amenities():
-    presentation = get_listing_presentation(sample_listing_info_json, "test_id")
+    presentation = get_listing_presentation(sample_listing_info_json_172222, "test_id")
     result_amenities = parse_amenities("test_id", presentation)
 
-    expected_amenities = dict((key, parsed_listing_data[key]) 
-                              for key in parsed_listing_data.keys() if key.endswith('_amenities'))
+    expected_amenities = dict((key, parsed_listing_data_172222[key]) 
+                              for key in parsed_listing_data_172222.keys() if key.endswith('_amenities'))
 
     assert result_amenities == expected_amenities, (
         f"Listing id: 172222\n"
@@ -114,17 +115,64 @@ def test_parse_amenities():
         f"Got: {result_amenities}"
     )
 
+    presentation = get_listing_presentation(sample_listing_info_json_888757305688084444, "test_id")
+    result_amenities = parse_amenities("test_id", presentation)
+
+    expected_amenities = dict((key, parsed_listing_data_888757305688084444[key]) 
+                              for key in parsed_listing_data_888757305688084444.keys() if key.endswith('_amenities'))
+
+    assert result_amenities == expected_amenities, (
+        f"Listing id: 888757305688084444\n"
+        f"Failed to parse amenities correctly.\n"
+        f"Expected: {expected_amenities}\n"
+        f"Got: {result_amenities}"
+    )
+
 
 def test_parse_description():
-    presentation = get_listing_presentation(sample_listing_info_json, "test_id")
+    presentation = get_listing_presentation(sample_listing_info_json_172222, "test_id")
     result_description = parse_description("test_id", presentation)
 
-    expected_description = dict((key, parsed_listing_data[key]) 
-                                for key in parsed_listing_data.keys() if key.endswith('_description'))
+    expected_description = dict((key, parsed_listing_data_172222[key]) 
+                                for key in parsed_listing_data_172222.keys() if key.endswith('_description'))
 
     assert result_description == expected_description, (
         f"Listing id: 172222\n"
         f"Failed to parse description correctly.\n"
         f"Expected: {expected_description}\n"
         f"Got: {result_description}"
+    )
+
+    presentation = get_listing_presentation(sample_listing_info_json_888757305688084444, "test_id")
+    result_description = parse_description("test_id", presentation)
+
+    expected_description = dict((key, parsed_listing_data_888757305688084444[key]) 
+                                for key in parsed_listing_data_888757305688084444.keys() if key.endswith('_description'))
+
+    assert result_description == expected_description, (
+        f"Listing id: 888757305688084444\n"
+        f"Failed to parse description correctly.\n"
+        f"Expected: {expected_description}\n"
+        f"Got: {result_description}"
+    )
+
+
+def test_parse_listing():
+    result_parcing_dict_172222 = parse_listing(sample_listing_info_json_172222, "172222")
+
+    assert result_parcing_dict_172222 == parsed_listing_data_172222, (
+        f"Listing id: 172222\n"
+        f"Failed to parse description correctly.\n"
+        f"Expected: {parsed_listing_data_172222}\n"
+        f"Got: {result_parcing_dict_172222}"
+    )
+
+    result_parcing_dict_888757305688084444 = parse_listing(sample_listing_info_json_888757305688084444,
+                                                        "888757305688084444")
+
+    assert result_parcing_dict_888757305688084444 == parsed_listing_data_888757305688084444, (
+        f"Listing id: 888757305688084444\n"
+        f"Failed to parse description correctly.\n"
+        f"Expected: {parsed_listing_data_888757305688084444}\n"
+        f"Got: {result_parcing_dict_888757305688084444}"
     )
