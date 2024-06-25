@@ -30,9 +30,9 @@ HEADERS = {
 }
 
 QUERYSTRING = {
-    "location": "Chilliwack, BC, Canada",  # Change city here
-    "checkin": "2024-11-01",  # Change for different dump
-    "checkout": "2024-11-04",  # Change for different dump
+    "location": "Richmond, BC, Canada",  # Change city here
+    "checkin": "2024-06-30",  # Change for different dump
+    "checkout": "2024-07-05",  # Change for different dump
     "adults": "1",
     "children": "0",
     "infants": "0",
