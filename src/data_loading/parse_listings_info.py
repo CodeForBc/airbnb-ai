@@ -6,7 +6,7 @@ import logging
 from utils import setup_logging, read_jsonl
 from typing import List
 
-LOG_FILE_PATH = "parsing_listing_info.log"
+LOG_FILE_PATH = "../../logs/parsing_listing_info.log"
 
 
 def parse_arguments():
@@ -25,7 +25,17 @@ def parse_arguments():
 
 
 def safe_get(dictionary: dict, keys: List[str], default=None) -> dict:
-    """ Safely get a value from a nested dictionary using a list of keys """
+    """
+    Safely get a value from a nested dictionary using a list of keys.
+
+    Args:
+        dictionary (dict): The dictionary to search.
+        keys (List[str]): A list of keys representing the path to the desired value.
+        default: The default value to return if any key is not found. Defaults to None.
+
+    Returns:
+        dict: The value found at the specified path or the default value.
+    """
     for key in keys:
         if dictionary is not None and key in dictionary:
             dictionary = dictionary[key]
@@ -34,7 +44,39 @@ def safe_get(dictionary: dict, keys: List[str], default=None) -> dict:
     return dictionary
 
 
+def replace_line_breaks(initial_dict: dict) -> dict:
+    """
+    Replace line breaks in the values of a dictionary with a specified replacement symbol.
+
+    Args:
+        initial_dict (dict): The dictionary whose values need line breaks replaced.
+
+    Returns:
+        dict: The dictionary with line breaks replaced in its values.
+    """
+    LINE_BREAK_REPLACEMENT_SYMBOL = ' %%% '
+
+    for key in initial_dict.keys():
+        if type(initial_dict[key]) == list:
+            initial_dict[key] = [part.replace('\n', LINE_BREAK_REPLACEMENT_SYMBOL) 
+                                 for part in initial_dict[key]]
+        else:
+            initial_dict[key] = initial_dict[key].replace('\n', LINE_BREAK_REPLACEMENT_SYMBOL)
+
+    return initial_dict
+
+
 def parse_house_rules_json(listing_id: str, presentation: dict) -> dict:
+    """
+    Parse house rules from the presentation dictionary.
+
+    Args:
+        listing_id (str): The ID of the listing.
+        presentation (dict): The presentation data from which to extract house rules.
+
+    Returns:
+        dict: A dictionary of parsed house rules.
+    """
     house_rules_dict = {}
     sections = safe_get(presentation, ['stayProductDetailPage', 'sections', 'sections'], [])
 
@@ -74,10 +116,22 @@ def parse_house_rules_json(listing_id: str, presentation: dict) -> dict:
 
             house_rules_dict[house_rule_name] = items_list
 
+    house_rules_dict = replace_line_breaks(house_rules_dict)
+
     return house_rules_dict
 
 
 def parse_amenities(listing_id: str, presentation: dict) -> dict:
+    """
+    Parse amenities from the presentation dictionary.
+
+    Args:
+        listing_id (str): The ID of the listing.
+        presentation (dict): The presentation data from which to extract amenities.
+
+    Returns:
+        dict: A dictionary of parsed amenities.
+    """
     amenities_dict = {}
     sections = safe_get(presentation, ['stayProductDetailPage', 'sections', 'sections'], [])
 
@@ -101,10 +155,22 @@ def parse_amenities(listing_id: str, presentation: dict) -> dict:
             amenities_list = [item['title'] for item in safe_get(amenity_item, ['amenities'], [])]
             amenities_dict[amenity_name] = amenities_list
 
+    amenities_dict = replace_line_breaks(amenities_dict)
+    
     return amenities_dict
 
 
 def parse_description(listing_id: str, presentation: dict) -> dict:
+    """
+    Parse description from the presentation dictionary.
+
+    Args:
+        listing_id (str): The ID of the listing.
+        presentation (dict): The presentation data from which to extract descriptions.
+
+    Returns:
+        dict: A dictionary of parsed descriptions.
+    """
     description_dict = {}
 
     # Extract selected description sections
@@ -132,10 +198,22 @@ def parse_description(listing_id: str, presentation: dict) -> dict:
             key = f"{title.lower().replace(' ', '_')}_description" if title else "place_description"
             description_dict[key] = html_text
 
+    description_dict = replace_line_breaks(description_dict)
+    
     return description_dict
 
 
 def get_listing_presentation(listing_info_json: object, listing_id: str) -> object:
+    """
+    Extract the presentation data from the listing information JSON.
+
+    Args:
+        listing_info_json (object): The JSON object containing listing information.
+        listing_id (str): The ID of the listing.
+
+    Returns:
+        object: The presentation data or None if extraction fails.
+    """
     try:
         # Extract the presentation data
         presentation = listing_info_json[0]['root > core-guest-spa'][1][1]['niobeMinimalClientData'][1][1]['data'][
@@ -149,7 +227,7 @@ def get_listing_presentation(listing_info_json: object, listing_id: str) -> obje
 
 def main():
     """
-    Main function to parse Airbnb listing descriptions and save them to files.
+    Main function to parse Airbnb listing descriptions, amenities, and house rules, and save them to files.
     """
     # Parse command-line arguments
     args = parse_arguments()
