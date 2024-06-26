@@ -57,7 +57,7 @@ python parse_listings_info.py
 ```
 
 
-## (optional) How to dump listing information 
+## (optional) How to dump listing information with RapidAPI
 
 1. Activate the virtual environment as described above
 
