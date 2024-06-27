@@ -109,6 +109,7 @@ def main():
             logging.info(f"{listing_id=} saved to {output_file_path=}")
         else:
             logging.error(f"{listing_id=} extracted null")
+
         time.sleep(0.2)
 
 
