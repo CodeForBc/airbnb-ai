@@ -296,25 +296,28 @@ def main():
     # Loop through each listing ID and process it
     try:
         for count, listing_id_json_file in enumerate(listing_id_json_list, start=1):
+            try:
+                listing_id = listing_id_json_file.replace('.jsonl', '')
+                logging.info(f"Starting {listing_id_json_file=}, {listing_id=} ({count}/{total_listings})")
 
-            listing_id = listing_id_json_file.replace('.jsonl', '')
-            logging.info(f"Starting {listing_id_json_file=}, {listing_id=} ({count}/{total_listings})")
+                # Open .jsonl file
+                json_file_path = os.path.join(args.data_path, listing_id_json_file)
+                listing_info_json = read_jsonl(json_file_path)
 
-            # Open .jsonl file
-            json_file_path = os.path.join(args.data_path, listing_id_json_file)
-            listing_info_json = read_jsonl(json_file_path)
+                # Main parsing logic
+                parcing_dict = parse_listing(listing_info_json, listing_id)
+                
+                # Write the extracted data to the output file
+                with open(output_file_path, 'a') as file:  # Open file in append mode
+                    file.write(json.dumps(parcing_dict) + '\n')
 
-            # Main parsing logic
-            parcing_dict = parse_listing(listing_info_json, listing_id)
-            
-            # Write the extracted data to the output file
-            with open(output_file_path, 'a') as file:  # Open file in append mode
-                file.write(json.dumps(parcing_dict) + '\n')
-
-            logging.info(f"{listing_id=} added")
-
+                logging.info(f"{listing_id=} added")
+            except Exception as ex:
+                logging.error(f"{listing_id=} failed. Error: {ex.with_traceback()}")
+                continue
+    
     except Exception as ex:
-        logging.error(f"For loop failed. Error: {ex.with_traceback()}")
+        logging.error(f"For loop failed, {listing_id=}. Error: {ex.with_traceback()}")
         return
 
 

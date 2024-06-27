@@ -28,6 +28,41 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def download_listing_json(listing_id: str) -> dict:
+    """
+    Download the listing information JSON for a given listing ID from Airbnb.
+
+    Args:
+        listing_id (str): The ID of the listing to be downloaded.
+
+    Returns:
+        dict: The JSON data of the listing or None if download fails or the specific script tag is not found.
+    """
+    url = f"https://www.airbnb.com/rooms/{listing_id}"
+
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        logging.error(f"{listing_id=} failed to be scraped, {response.status_code=}")
+        return
+
+    html_content = response.text
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Find the specific script tag containing the JSON data
+    script_tag = soup.find('script', {'data-injector-instances': 'true', 'id': 'data-injector-instances', 'type': 'application/json'})
+    
+    if not script_tag:
+        # logging.warning(f"{listing_id} No matching script tag found. Listing ID does not exist")
+        logging.error(f"{listing_id=} No matching script tag found")
+        return
+
+    # Parse the JSON data from the script tag
+    listing_info_json = json.loads(script_tag.text)
+
+    return listing_info_json
+
+
 def main():
     """
     Main function to parse Airbnb listing descriptions and save them to files.
@@ -62,36 +97,18 @@ def main():
             logging.info(f"{listing_id=} already exists")
             continue
         
-        url = f"https://www.airbnb.com/rooms/{listing_id}"
-
-        response = requests.get(url)
-
-        if response.status_code != 200:
-            logging.error(f"{listing_id=} failed to be scraped, {response.status_code=}")
-            continue
-
-        html_content = response.text
-        soup = BeautifulSoup(html_content, 'html.parser')
-
-        # Find the specific script tag containing the JSON data
-        script_tag = soup.find('script', {'data-injector-instances': 'true', 'id': 'data-injector-instances', 'type': 'application/json'})
-        
-        if not script_tag:
-            # logging.warning(f"{listing_id} No matching script tag found. Listing ID does not exist")
-            logging.error(f"{listing_id=} No matching script tag found")
-            continue
-
-        # Parse the JSON data from the script tag
-        listing_info_json = json.loads(script_tag.text)
-
-        output_file_path = os.path.join(args.path_to_save, listing_id + '.jsonl')
+        # Download listing html and extract json part of it
+        listing_info_json = download_listing_json(listing_id)
 
         # Write the extracted data to the output file
-        with open(output_file_path, 'w') as file:  
-            file.write(json.dumps(listing_info_json) + '\n')
+        if listing_info_json:
+            output_file_path = os.path.join(args.path_to_save, listing_id + '.jsonl')
+            with open(output_file_path, 'w') as file:  
+                file.write(json.dumps(listing_info_json) + '\n')
 
-        logging.info(f"{listing_id=} saved to {output_file_path=}")
-
+            logging.info(f"{listing_id=} saved to {output_file_path=}")
+        else:
+            logging.error(f"{listing_id=} extracted null")
         time.sleep(0.2)
 
 
