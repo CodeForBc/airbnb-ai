@@ -43,7 +43,21 @@ deactivate
 
 Don't forget to activate the virtual environment every time you enter the project again.
 
-## How to dump listing information
+## How to get data
+
+1. Activate the virtual environment as described above
+2. Move to the folder with scraping files and run downloading of listing htmls and their jsons:
+```
+cd src/data_loading/
+python download_listing_jsons.py
+```
+3. Parse downloaded listing jsons to get listing description, amenities and house rules in .jsonl file:
+```
+python parse_listings_info.py
+```
+
+
+## (optional) How to dump listing information with RapidAPI
 
 1. Activate the virtual environment as described above
 
@@ -55,32 +69,24 @@ cd src/data_loading/
 python dump_listings_with_rapidapi.py 
 ```
 
-## How to dump listing information
+## To run tests
 
 1. Activate the virtual environment as described above
 
-2. Add `.env` file to the root directory and insert your RapidAPI key there RAPIDAPI_KEY="your key". Should look like `.env_example` file
-
-3. Move to the folder with dumping file and run the file:
+3. Move to the folder with tests and run pytest:
 ```
-cd src/data_loading/
-python dump_listings_with_rapidapi.py 
+cd src/tests/
+pytest -v
 ```
 
-## How to scrape listing description
-
-1. Activate the virtual environment as described above
-3. Move to the folder with scraping file and run it:
-```
-cd src/data_loading/
-python scrape_listing_descriptions.py
-```
 
 ## Project Organization
 ```
 ├── LICENSE
 ├── README.md          <- The top-level README for developers using this project.
 |
+├── data               <- Sample data,
+├── logs               <- Where logs are stored
 ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
 |   |                     the creator's initials, and a short `-` delimited description, e.g.
 |   |                     `1.0_jqp_initial-data-exploration`.
@@ -88,11 +94,12 @@ python scrape_listing_descriptions.py
 │   └── reports        <- Polished notebooks for presentations or intermediate results.
 │
 ├── requirements.txt   <- File containing the requirements.
+├── .env               <- File containing environment variables (please create it the same way as `.env_example`).
 │
 ├── src                <- Source code for use in this project.
 │   ├── __init__.py    <- Makes src a Python module
 │   │
-│   ├── data_loading   <- Scripts to download or generate data
+│   ├── data_loading   <- Scripts to download and parce data
 │   │
 │   ├── preprocessing  <- Scripts to turn raw data into clean data and features for modeling
 |   |
