@@ -244,27 +244,27 @@ def parse_listing(listing_info_json: object, listing_id: str) -> dict:
     """
     presentation = get_listing_presentation(listing_info_json, listing_id)
 
-    parcing_dict = {'listing_id': listing_id}
+    parsing_dict = {'listing_id': listing_id}
 
     # house_rules_dict
     house_rules_dict = parse_house_rules(listing_id, presentation)
     logging.info(f"{listing_id=} house_rules_dict processed {house_rules_dict=}")
     if house_rules_dict:
-        parcing_dict.update(house_rules_dict)
+        parsing_dict.update(house_rules_dict)
 
     # description_dict
     description_dict = parse_amenities(listing_id, presentation)
     logging.info(f"{listing_id=} description_dict processed {description_dict=}")
     if description_dict:
-        parcing_dict.update(description_dict)
+        parsing_dict.update(description_dict)
 
     # amenities_dict
     amenities_dict = parse_description(listing_id, presentation)
     logging.info(f"{listing_id=} amenities_dict processed {amenities_dict=}")
     if amenities_dict:
-        parcing_dict.update(amenities_dict)
+        parsing_dict.update(amenities_dict)
 
-    return parcing_dict
+    return parsing_dict
 
 
 def main():
@@ -305,11 +305,11 @@ def main():
                 listing_info_json = read_jsonl(json_file_path)
 
                 # Main parsing logic
-                parcing_dict = parse_listing(listing_info_json, listing_id)
+                parsing_dict = parse_listing(listing_info_json, listing_id)
                 
                 # Write the extracted data to the output file
                 with open(output_file_path, 'a') as file:  # Open file in append mode
-                    file.write(json.dumps(parcing_dict) + '\n')
+                    file.write(json.dumps(parsing_dict) + '\n')
 
                 logging.info(f"{listing_id=} added")
             except Exception as ex:
