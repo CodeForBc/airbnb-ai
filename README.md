@@ -43,7 +43,7 @@ deactivate
 
 Don't forget to activate the virtual environment every time you enter the project again.
 
-<<<<<<< HEAD
+
 ## How to get data
 
 1. Activate the virtual environment as described above
@@ -59,9 +59,6 @@ python parse_listings_info.py
 
 ## (optional) How to dump listing information with RapidAPI
 
-=======
-## How to dump listing information
->>>>>>> ac6836a (Revert "Pulled changes main and continued exploring data")
 
 1. Activate the virtual environment as described above
 

@@ -53,7 +53,6 @@ def download_listing_json(listing_id: str) -> dict:
     script_tag = soup.find('script', {'data-injector-instances': 'true', 'id': 'data-injector-instances', 'type': 'application/json'})
     
     if not script_tag:
-        # logging.warning(f"{listing_id} No matching script tag found. Listing ID does not exist")
         logging.error(f"{listing_id=} No matching script tag found")
         return
 
